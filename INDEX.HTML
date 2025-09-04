@@ -1,0 +1,561 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Bhawani Optical – Simple 3D App</title>
+  <meta name="theme-color" content="#0ea5e9"/>
+  <!-- App meta -->
+  <meta name="description" content="Simple optical app with prescription form, lens recommendations, and eye test chart with 3D CSS UI."/>
+  <style>
+    :root{
+      --bg1:#0f172a; /* slate-900 */
+      --bg2:#111827; /* gray-900 */
+      --glass: rgba(255,255,255,.08);
+      --text:#e5e7eb;
+      --accent:#38bdf8; /* sky-400 */
+      --accent2:#a78bfa; /* violet-400 */
+      --good:#22c55e;
+      --warn:#f59e0b;
+      --bad:#ef4444;
+      --shadow:0 10px 30px rgba(0,0,0,.35);
+    }
+    *{box-sizing:border-box}
+    html,body{height:100%}
+    body{
+      margin:0; font-family:system-ui,-apple-system,Segoe UI,Roboto,Ubuntu,"Helvetica Neue",sans-serif;
+      color:var(--text);
+      background: radial-gradient(1000px 600px at 10% 10%, #0ea5e9 0%, transparent 60%),
+                  radial-gradient(900px 600px at 90% 20%, #a78bfa 0%, transparent 55%),
+                  linear-gradient(120deg, var(--bg1), var(--bg2));
+      overflow-x:hidden;
+    }
+    .container{max-width:1100px; margin:0 auto; padding:24px}
+
+    /* 3D floating header */
+    header{position:sticky; top:0; z-index:50; backdrop-filter:blur(8px); background:linear-gradient( to bottom, rgba(15,23,42,.8), rgba(15,23,42,.2)); border-bottom:1px solid rgba(255,255,255,.06)}
+    .brand{
+      display:flex; align-items:center; gap:14px; padding:14px 0;
+      perspective:1000px;
+    }
+    .logo3d{
+      width:52px; height:52px; border-radius:16px; background:conic-gradient(from 180deg, #38bdf8, #a78bfa, #38bdf8);
+      box-shadow: inset 0 0 18px rgba(255,255,255,.3), var(--shadow);
+      transform-style:preserve-3d; transform:rotateX(15deg) rotateY(-18deg);
+    }
+    .title{
+      line-height:1.1; font-weight:800;
+      text-shadow:0 10px 25px rgba(56,189,248,.35);
+    }
+    .title .top{font-size: clamp(22px, 3.2vw, 34px); letter-spacing:.4px}
+    .subtitle{opacity:.8; font-size:14px}
+
+    /* Nav */
+    nav{display:flex; gap:8px; flex-wrap:wrap; margin:8px 0 16px}
+    .tab{border:1px solid rgba(255,255,255,.12); padding:10px 14px; border-radius:14px; cursor:pointer; background:var(--glass); backdrop-filter: blur(8px);
+      box-shadow:var(--shadow); transition: transform .15s ease, border-color .2s ease, box-shadow .2s ease}
+    .tab.active{border-color: var(--accent); box-shadow: 0 10px 30px rgba(56,189,248,.25)}
+    .tab:hover{transform: translateY(-2px)}
+
+    /* Cards + 3D tilt */
+    .grid{display:grid; grid-template-columns:repeat(12, 1fr); gap:18px}
+    .card{grid-column: span 12; background:var(--glass); border:1px solid rgba(255,255,255,.12); border-radius:22px; padding:18px; box-shadow:var(--shadow);
+      perspective:800px; transform-style:preserve-3d; position:relative; overflow:hidden}
+    .card.tilt:hover{transform: translateY(-2px)}
+    .card h2{margin:0 0 12px; font-size: clamp(18px, 2.1vw, 22px)}
+    .hint{opacity:.75; font-size:12px}
+
+    .split{display:grid; grid-template-columns:1fr; gap:16px}
+    @media(min-width:900px){
+      .card.half{grid-column: span 6}
+      .split{grid-template-columns:1fr 1fr}
+    }
+
+    label{display:block; font-size:12px; opacity:.8; margin:8px 0 6px}
+    input, select, textarea{
+      width:100%; padding:12px 12px; border-radius:14px; border:1px solid rgba(255,255,255,.14); background:rgba(255,255,255,.06); color:var(--text);
+      outline: none; transition: border-color .2s ease, transform .06s ease; backdrop-filter: blur(4px);
+    }
+    input:focus, select:focus, textarea:focus{border-color: var(--accent)}
+
+    .btn{display:inline-flex; align-items:center; gap:8px; padding:10px 14px; border-radius:14px; border:1px solid rgba(255,255,255,.16); background:linear-gradient(135deg, rgba(56,189,248,.25), rgba(167,139,250,.22)); cursor:pointer; color:var(--text);
+      box-shadow:var(--shadow); transition: transform .15s ease, box-shadow .2s ease}
+    .btn:hover{transform: translateY(-2px)}
+    .btn.ghost{background:rgba(255,255,255,.06)}
+    .btn.good{background:linear-gradient(135deg, rgba(34,197,94,.25), rgba(56,189,248,.22))}
+
+    .pill{display:inline-block; padding:6px 10px; border-radius:999px; border:1px solid rgba(255,255,255,.16); background:rgba(255,255,255,.06); font-size:12px}
+
+    .kpi{display:flex; gap:12px; flex-wrap:wrap; margin:6px 0 12px}
+    .kpi .pill{font-weight:600}
+
+    /* Eye chart */
+    .chart-wrap{display:flex; align-items:center; justify-content:center; min-height:380px; background:radial-gradient(circle at 50% -30%, rgba(56,189,248,.3), transparent 50%), rgba(0,0,0,.15); border-radius:18px; border:1px dashed rgba(255,255,255,.2)}
+    .snellen{font-family: 'Segoe UI', Roboto, Ubuntu, Arial, Helvetica, sans-serif; text-transform:uppercase; letter-spacing: .08em; text-align:center}
+    .snellen .line{margin:4px 0; font-weight:800}
+
+    .row{display:flex; gap:10px; flex-wrap:wrap}
+
+    footer{opacity:.7; font-size:12px; text-align:center; padding:32px 0}
+  </style>
+</head>
+<body>
+  <header>
+    <div class="container">
+      <div class="brand">
+        <div class="logo3d" aria-hidden="true"></div>
+        <div>
+          <div class="title">
+            <div class="top">Bhawani Optical</div>
+          </div>
+          <div class="subtitle">Near Government Hospital, Paota, Kotputli–Bahror, Jaipur · Optician: Ashok Kumar Sharma · ☎ 8003849847</div>
+        </div>
+      </div>
+      <nav>
+        <button class="tab active" data-tab="dashboard">Dashboard</button>
+        <button class="tab" data-tab="prescription">Prescription</button>
+        <button class="tab" data-tab="recommend">Recommendations</button>
+        <button class="tab" data-tab="eyetest">Eye Test</button>
+        <button class="tab" data-tab="about">About</button>
+      </nav>
+    </div>
+  </header>
+
+  <main class="container">
+    <!-- DASHBOARD -->
+    <section class="grid view" id="dashboard">
+      <div class="card tilt">
+        <h2>Welcome</h2>
+        <p>Fast, simple tools for customers and staff — with a modern 3D UI.</p>
+        <div class="kpi">
+          <span class="pill">3D UI</span>
+          <span class="pill">Prescription Save</span>
+          <span class="pill">Lens Advisor</span>
+          <span class="pill">Eye Chart</span>
+          <span class="pill">Offline‑ready*</span>
+        </div>
+        <p class="hint">* When wrapped as an APK or hosted with a service worker.</p>
+        <div class="row" style="margin-top:12px">
+          <button class="btn" onclick="switchTab('prescription')">Add Prescription</button>
+          <button class="btn good" onclick="switchTab('recommend')">Get Lens Recommendation</button>
+          <button class="btn ghost" onclick="switchTab('eyetest')">Open Eye Test</button>
+        </div>
+      </div>
+
+      <div class="card half tilt">
+        <h2>Quick Actions</h2>
+        <div class="row">
+          <button class="btn" onclick="exportPrescription()">Export Prescription</button>
+          <button class="btn" onclick="importPrescription()">Import Prescription</button>
+          <button class="btn ghost" onclick="clearPrescription()">Clear Saved Data</button>
+        </div>
+        <p class="hint">Exports a JSON text you can share/backup. Data is stored locally in your browser.</p>
+      </div>
+
+      <div class="card half tilt">
+        <h2>Shop Info</h2>
+        <div class="row" style="align-items:center">
+          <span class="pill">Open 10:00 – 20:00 (edit in code)</span>
+          <span class="pill">Repairs & Fittings</span>
+          <span class="pill">Eye Checkup</span>
+        </div>
+        <p class="hint">Customize timings, services, and price list in the HTML.</p>
+      </div>
+    </section>
+
+    <!-- PRESCRIPTION -->
+    <section class="grid view" id="prescription" hidden>
+      <div class="card">
+        <h2>Patient Details</h2>
+        <div class="split">
+          <div>
+            <label>Patient Name</label>
+            <input id="p_name" placeholder="Full name"/>
+          </div>
+          <div>
+            <label>Age</label>
+            <input id="p_age" type="number" min="0" placeholder="Age"/>
+          </div>
+        </div>
+      </div>
+
+      <div class="card">
+        <h2>Prescription (SPH / CYL / AXIS / ADD)</h2>
+        <div class="split">
+          <div>
+            <h3>Right (OD)</h3>
+            <label>Sphere (SPH)</label>
+            <input id="od_sph" type="number" step="0.25" placeholder="e.g. -1.25"/>
+            <label>Cylinder (CYL)</label>
+            <input id="od_cyl" type="number" step="0.25" placeholder="e.g. -0.50"/>
+            <label>Axis</label>
+            <input id="od_axis" type="number" min="0" max="180" placeholder="0–180"/>
+            <label>Near Add (ADD)</label>
+            <input id="od_add" type="number" step="0.25" placeholder="e.g. +1.25"/>
+          </div>
+          <div>
+            <h3>Left (OS)</h3>
+            <label>Sphere (SPH)</label>
+            <input id="os_sph" type="number" step="0.25" placeholder="e.g. -1.00"/>
+            <label>Cylinder (CYL)</label>
+            <input id="os_cyl" type="number" step="0.25" placeholder="e.g. -0.50"/>
+            <label>Axis</label>
+            <input id="os_axis" type="number" min="0" max="180" placeholder="0–180"/>
+            <label>Near Add (ADD)</label>
+            <input id="os_add" type="number" step="0.25" placeholder="e.g. +1.25"/>
+          </div>
+        </div>
+        <div class="split">
+          <div>
+            <label>PD (Pupillary Distance, mm)</label>
+            <input id="pd" type="number" step="0.5" placeholder="e.g. 62"/>
+          </div>
+          <div>
+            <label>Usage</label>
+            <select id="usage">
+              <option value="general">General / All‑day</option>
+              <option value="computer">Computer / Office</option>
+              <option value="driving">Driving</option>
+              <option value="outdoor">Outdoor / Sun</option>
+              <option value="reading">Reading only</option>
+              <option value="kids">Kids / Sports</option>
+            </select>
+          </div>
+        </div>
+        <div class="row" style="margin-top:10px">
+          <button class="btn good" onclick="saveRx()">Save Prescription</button>
+          <button class="btn" onclick="loadRx()">Load Saved</button>
+        </div>
+        <p class="hint">Saved locally in this device’s browser.</p>
+      </div>
+    </section>
+
+    <!-- RECOMMENDATIONS -->
+    <section class="grid view" id="recommend" hidden>
+      <div class="card">
+        <h2>Lens Recommendation</h2>
+        <div class="row">
+          <button class="btn good" onclick="calculateAdvice()">Generate Advice</button>
+          <button class="btn ghost" onclick="copyAdvice()">Copy</button>
+        </div>
+        <div id="advice" style="margin-top:12px"></div>
+        <p class="hint">Rule‑based advisor (offline). Always confirm with a qualified optometrist.</p>
+      </div>
+
+      <div class="card half">
+        <h2>Frame Size Guide</h2>
+        <p>Start with <b>PD ÷ 2 ≈ monocular PD</b>. Try frames where lens width ≈ monocular PD × 2 ± 3mm. For kids/sports choose polycarbonate or Trivex.</p>
+        <div class="kpi">
+          <span class="pill">AR + Scratch coat</span>
+          <span class="pill">UV400</span>
+          <span class="pill">Blue‑control for screens</span>
+        </div>
+      </div>
+
+      <div class="card half">
+        <h2>Care Tips</h2>
+        <ul>
+          <li>Rinse dust before wiping to avoid micro‑scratches.</li>
+          <li>Use both hands to remove glasses to keep alignment.</li>
+          <li>Store in hard case; avoid car dashboards (heat warps lenses).</li>
+        </ul>
+      </div>
+    </section>
+
+    <!-- EYE TEST -->
+    <section class="grid view" id="eyetest" hidden>
+      <div class="card">
+        <h2>Snellen Eye Chart (Demo)</h2>
+        <div class="split">
+          <div>
+            <label>Distance from screen (feet)</label>
+            <input id="distanceFt" type="number" step="0.1" value="10"/>
+          </div>
+          <div>
+            <label>Scale</label>
+            <input id="scale" type="range" min="0.6" max="1.4" step="0.02" value="1" oninput="renderChart()"/>
+          </div>
+        </div>
+        <div class="chart-wrap">
+          <div id="chart" class="snellen"></div>
+        </div>
+        <p class="hint">For orientation only, not a medical diagnosis. Stand at the set distance. Cover one eye and read lines until you miss 2+ letters.</p>
+        <div class="row">
+          <button class="btn" onclick="fullscreenChart()">Fullscreen</button>
+          <button class="btn ghost" onclick="flipBG()">Toggle Dark/Light</button>
+        </div>
+      </div>
+
+      <div class="card half">
+        <h2>Red‑Green Balance (Quick)</h2>
+        <p>If letters look clearer on <span style="color:#ef4444">Red</span> → reduce minus / increase plus slightly; on <span style="color:#22c55e">Green</span> → increase minus / reduce plus. For trained staff only.</p>
+        <div class="split">
+          <div style="background:#7f1d1d; padding:12px; border-radius:14px; text-align:center"> <span style="font-size:42px; font-weight:800; color:#fecaca">5 3 9</span></div>
+          <div style="background:#064e3b; padding:12px; border-radius:14px; text-align:center"> <span style="font-size:42px; font-weight:800; color:#bbf7d0">5 3 9</span></div>
+        </div>
+      </div>
+
+      <div class="card half">
+        <h2>Instructions</h2>
+        <ol>
+          <li>Place screen at eye level, good lighting, no glare.</li>
+          <li>Set distance, press <b>Fullscreen</b>.</li>
+          <li>Cover one eye, read top to bottom. Repeat other eye.</li>
+        </ol>
+      </div>
+    </section>
+
+    <!-- ABOUT -->
+    <section class="grid view" id="about" hidden>
+      <div class="card">
+        <h2>About This App</h2>
+        <p>Built for Bhawani Optical — quick workflow for recording prescriptions, suggesting lenses, and basic screening. Can be wrapped as an Android APK with Cordova/Capacitor, or hosted online.</p>
+        <ul>
+          <li>Single HTML file, no external libraries.</li>
+          <li>3D glassmorphism UI with hover tilt.</li>
+          <li>Local‑only storage (no internet required).</li>
+        </ul>
+      </div>
+    </section>
+  </main>
+
+  <footer>
+    © <span id="year"></span> Bhawani Optical — Simple Optical App
+  </footer>
+
+  <script>
+    // --- Tab switching ---
+    const tabs = document.querySelectorAll('.tab');
+    tabs.forEach(t=>t.addEventListener('click',()=>switchTab(t.dataset.tab)));
+    function switchTab(id){
+      document.querySelectorAll('.tab').forEach(el=>el.classList.toggle('active', el.dataset.tab===id));
+      document.querySelectorAll('.view').forEach(v=>v.hidden = v.id!==id);
+      if(id==='eyetest') renderChart();
+      window.scrollTo({top:0, behavior:'smooth'});
+    }
+
+    // --- Simple 3D tilt on cards ---
+    document.querySelectorAll('.card.tilt').forEach(card=>{
+      card.addEventListener('mousemove', (e)=>{
+        const r = card.getBoundingClientRect();
+        const x = (e.clientX - r.left)/r.width - .5;
+        const y = (e.clientY - r.top)/r.height - .5;
+        card.style.transform = `rotateY(${x*6}deg) rotateX(${-y*6}deg)`;
+      });
+      card.addEventListener('mouseleave', ()=>{
+        card.style.transform = 'rotateY(0) rotateX(0) translateY(0)';
+      });
+    });
+
+    // --- Prescription storage ---
+    const fields = ['p_name','p_age','od_sph','od_cyl','od_axis','od_add','os_sph','os_cyl','os_axis','os_add','pd','usage'];
+    function getRx(){
+      const rx={}; fields.forEach(id=> rx[id]=document.getElementById(id).value.trim()); return rx;
+    }
+    function setRx(rx){
+      fields.forEach(id=>{ if(rx[id]!==undefined) document.getElementById(id).value = rx[id]; });
+    }
+    function saveRx(){ localStorage.setItem('bhawani_rx', JSON.stringify(getRx())); toast('Prescription saved.'); }
+    function loadRx(){ const v = localStorage.getItem('bhawani_rx'); if(v){ setRx(JSON.parse(v)); toast('Loaded saved prescription.'); } else toast('No saved data.'); }
+    function clearPrescription(){ localStorage.removeItem('bhawani_rx'); toast('Cleared saved data.'); }
+
+    // --- Export/Import ---
+    function exportPrescription(){
+      const blob = new Blob([JSON.stringify(getRx(), null, 2)], {type:'application/json'});
+      const url = URL.createObjectURL(blob); const a = document.createElement('a');
+      a.href=url; a.download='prescription.json'; a.click(); URL.revokeObjectURL(url);
+    }
+    function importPrescription(){
+      const input = document.createElement('input'); input.type='file'; input.accept='.json,application/json';
+      input.onchange = ()=>{ const f=input.files[0]; if(!f) return; const r=new FileReader(); r.onload=()=>{ try{ setRx(JSON.parse(r.result)); toast('Imported.'); }catch(e){ toast('Invalid file.'); } }; r.readAsText(f); };
+      input.click();
+    }
+
+    // --- Advice rules ---
+    function val(n){ const v=parseFloat(n); return isNaN(v)?0:v; }
+    function calculateAdvice(){
+      const rx=getRx();
+      const age=val(rx.p_age), pd=val(rx.pd); const use=rx.usage||'general';
+      const sphMax=Math.max(Math.abs(val(rx.od_sph)), Math.abs(val(rx.os_sph)));
+      const cylMax=Math.max(Math.abs(val(rx.od_cyl)), Math.abs(val(rx.os_cyl)));
+      const addMax=Math.max(Math.abs(val(rx.od_add)), Math.abs(val(rx.os_add)));
+
+      const rec=[]; const notes=[];
+      // Lens material
+      if(sphMax>4 || cylMax>2){ rec.push('High‑index 1.67 for thinner lenses'); }
+      else if(sphMax>2){ rec.push('MR‑8 (1.60) mid‑index for balance'); }
+      else { rec.push('Polycarbonate / Trivex (impact‑resistant)'); }
+
+      // Coatings
+      rec.push('Anti‑reflective + Scratch resistant');
+      rec.push('UV400 protection');
+
+      // Usage‑based
+      if(use==='computer'){ rec.push('Blue‑control coating, 20–20–20 breaks'); }
+      if(use==='driving'){ rec.push('High‑contrast AR; polarized sun clip for day'); }
+      if(use==='outdoor'){ rec.push('Photochromic (day‑night) or Polarized sunglasses'); }
+      if(use==='reading'){ rec.push('Single‑vision near lenses tuned to working distance'); }
+      if(use==='kids'){ rec.push('Polycarbonate/Trivex with flexible frame, strap option'); }
+
+      // Presbyopia
+      if(addMax>=1){ rec.push('Progressive (multifocal) or office lenses'); }
+
+      // Astigmatism
+      if(cylMax>=1){ notes.push('Ensure precise axis marking and frame alignment.'); }
+
+      // Frame sizing hint
+      if(pd){ notes.push(`Start trying frames with lens width around ${Math.round(pd)} ± 3 mm.`); }
+
+      const html = `
+        <div class="kpi">
+          <span class="pill">Power max: ${sphMax.toFixed(2)}D</span>
+          <span class="pill">CYL max: ${cylMax.toFixed(2)}D</span>
+          <span class="pill">ADD max: ${addMax.toFixed(2)}D</span>
+          <span class="pill">Use: ${use}</span>
+        </div>
+        <h3>Suggested Options</h3>
+        <ul>${rec.map(x=>`<li>${x}</li>`).join('')}</ul>
+        ${notes.length?`<h3>Notes</h3><ul>${notes.map(x=>`<li>${x}</li>`).join('')}</ul>`:''}
+      `;
+      document.getElementById('advice').innerHTML=html;
+      toast('Advice generated.');
+    }
+    function copyAdvice(){
+      const el=document.createElement('div'); el.innerHTML=document.getElementById('advice').innerHTML.replace(/<[^>]+>/g,'');
+      const text=el.textContent; navigator.clipboard.writeText(text||'').then(()=>toast('Copied!'));
+    }
+
+    // --- Eye chart rendering ---
+    const lines = [
+      'E',
+      'F P',
+      'T O Z',
+      'L P E D',
+      'P E C F D',
+      'E D F C Z P',
+      'F E L O P Z D'
+    ];
+    function renderChart(){
+      const dist = parseFloat(document.getElementById('distanceFt').value)||10;
+      const scale = parseFloat(document.getElementById('scale').value)||1;
+      const base = 120; // px for top line at 20ft baseline
+      const k = (dist/20) * scale; // crude scaling
+      const chart = document.getElementById('chart');
+      chart.innerHTML = '';
+      lines.forEach((txt,i)=>{
+        const size = Math.max(12, Math.round(base/(i+1)*k));
+        const div = document.createElement('div');
+        div.className='line'; div.style.fontSize = size+'px';
+        div.textContent = txt;
+        chart.appendChild(div);
+      });
+    }
+    function fullscreenChart(){
+      const el=document.querySelector('.chart-wrap'); if(el.requestFullscreen) el.requestFullscreen();
+    }
+    function flipBG(){
+      const wrap=document.querySelector('.chart-wrap');
+      const on = wrap.dataset.dark==='1';
+      wrap.dataset.dark = on? '0':'1';
+      wrap.style.background = on ? 'rgba(255,255,255,.12)' : 'radial-gradient(circle at 50% -30%, rgba(0,0,0,.3), transparent 50%), rgba(0,0,0,.85)';
+    }
+
+    // --- Tiny toast ---
+    const toastDiv = document.createElement('div');
+    toastDiv.style.cssText = 'position:fixed;left:50%;bottom:24px;transform:translateX(-50%);padding:10px 14px;border-radius:12px;background:rgba(0,0,0,.7);color:#fff;opacity:0;transition:opacity .25s ease;z-index:9999;box-shadow:var(--shadow)';
+    document.body.appendChild(toastDiv);
+    function toast(msg){ toastDiv.textContent=msg; toastDiv.style.opacity='1'; setTimeout(()=>toastDiv.style.opacity='0', 1600); }
+
+    document.getElementById('year').textContent = new Date().getFullYear();
+    renderChart();
+  </script>
+</body>
+<section class="grid view" id="prescription" hidden>
+  <div class="card">
+    <h2>Patient Details</h2>
+
+    <label>Patient Name</label>
+    <input id="patientName" placeholder="Full name"/>
+
+    <label>Age</label>
+    <input id="patientAge" type="number" placeholder="Age"/>
+
+    <label>Prescription Notes</label>
+    <input id="patientNotes" placeholder="Enter prescription details"/>
+
+    <!-- Save Button with Icon -->
+    <button class="btn" style="margin-top:14px" onclick="savePrescription()">
+      📋 Save Prescription
+    </button>
+
+    <p id="saveMsg" style="margin-top:10px; color:green; font-weight:600;"></p>
+  </div>
+</section>
+
+<script>
+  function savePrescription() {
+    const name = document.getElementById("patientName").value;
+    const age = document.getElementById("patientAge").value;
+    const notes = document.getElementById("patientNotes").value;
+
+    if (!name || !age || !notes) {
+      document.getElementById("saveMsg").textContent = "⚠️ Please fill all fields!";
+      return;
+    }
+
+    const prescription = { name, age, notes, date: new Date().toLocaleString() };
+
+    // Save to local storage
+    let records = JSON.parse(localStorage.getItem("prescriptions")) || [];
+    records.push(prescription);
+    localStorage.setItem("prescriptions", JSON.stringify(records));
+
+    document.getElementById("saveMsg").textContent = "✅ Prescription saved successfully!";
+  }
+</script>
+<section class="grid view" id="prescription" hidden>
+  <div class="card">
+    <h2>Patient Details</h2>
+
+    <label>Patient Name</label>
+    <input id="patientName" placeholder="Full name"/>
+
+    <label>Age</label>
+    <input id="patientAge" type="number" placeholder="Age"/>
+
+    <label>Prescription Notes</label>
+    <input id="patientNotes" placeholder="Enter prescription details"/>
+
+    <!-- Save Button with Icon -->
+    <button class="btn" style="margin-top:14px" onclick="savePrescription()">
+      📋 Save Prescription
+    </button>
+
+    <p id="saveMsg" style="margin-top:10px; color:green; font-weight:600;"></p>
+  </div>
+</section>
+
+<script>
+  function savePrescription() {
+    const name = document.getElementById("patientName").value;
+    const age = document.getElementById("patientAge").value;
+    const notes = document.getElementById("patientNotes").value;
+
+    if (!name || !age || !notes) {
+      document.getElementById("saveMsg").textContent = "⚠️ Please fill all fields!";
+      return;
+    }
+
+    const prescription = { name, age, notes, date: new Date().toLocaleString() };
+
+    // Save to local storage
+    let records = JSON.parse(localStorage.getItem("prescriptions")) || [];
+    records.push(prescription);
+    localStorage.setItem("prescriptions", JSON.stringify(records));
+
+    document.getElementById("saveMsg").textContent = "✅ Prescription saved successfully!";
+  }
+</script>
+
+
+</html>
